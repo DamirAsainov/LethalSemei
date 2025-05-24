@@ -8,6 +8,7 @@ namespace Transports
     {
         [Header("Waypoints")] 
         [SerializeField] private List<Transform> waypoints;
+        [SerializeField] private GameObject cam;
 
         [Header("Transport Settings")]
         [SerializeField] private float motorTorque = 1200f;
@@ -36,6 +37,7 @@ namespace Transports
         
         public bool finishedDriving = false;
         private int currentWaypointIndex = 0;
+        private bool stoppedDriving = false;
 
         private Rigidbody rb;
 
@@ -46,15 +48,12 @@ namespace Transports
 
         void FixedUpdate()
         {
-            if (finishedDriving)
+            if (finishedDriving && stoppedDriving)
                 return;
-
-            if (currentWaypointIndex >= waypoints.Count)
+            if (finishedDriving)
             {
                 StopVehicle();
-                return;
             }
-
             Transform target = waypoints[currentWaypointIndex];
             Vector3 localTarget = transform.InverseTransformPoint(target.position);
             float steer = Mathf.Clamp(localTarget.x / localTarget.magnitude, -1f, 1f);
@@ -121,8 +120,12 @@ namespace Transports
 
         private void StopVehicle()
         {
-            StartCoroutine(StopVehicleSmoothly());
             finishedDriving = true;
+            stoppedDriving = true;
+            cam.SetActive(false);
+            Debug.Log("Stop vehicle KAMAZ");
+            StartCoroutine(StopVehicleSmoothly());
+            
 
             if (rb != null)
                 rb.isKinematic = true;
@@ -135,27 +138,11 @@ namespace Transports
             Rigidbody rb = GetComponent<Rigidbody>();
 
             // Запоминаем начальную скорость
-            Vector3 initialVelocity = rb.velocity;
-            float initialBrake = 0f;
+            
 
             while (elapsed < duration)
             {
                 float t = elapsed / duration;
-
-                foreach (WheelCollider wheel in driveWheels)
-                {
-                    wheel.motorTorque = 0f;
-                    wheel.brakeTorque = Mathf.Lerp(initialBrake, brakeForce, t);
-                }
-
-                foreach (WheelCollider wheel in steerWheels)
-                {
-                    wheel.steerAngle = Mathf.Lerp(wheel.steerAngle, 0f, t);
-                }
-
-                // Можно вручную затухать скорость
-                rb.velocity = Vector3.Lerp(initialVelocity, Vector3.zero, t);
-
                 elapsed += Time.deltaTime;
                 yield return null;
             }

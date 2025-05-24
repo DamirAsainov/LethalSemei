@@ -52,6 +52,11 @@ public class HealthSystem : MonoBehaviour, IDamagable
         Destroy(hit, 3f);
  
     }
+
+    public bool IsDead()
+    {
+        return health <= 0;
+    }
 }
 
 public interface IDieable
